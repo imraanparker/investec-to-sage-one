@@ -7,7 +7,7 @@ import sys
 if __name__ == "__main__":
     # get the dates to import. defaults to the last 180 days
     now = datetime.datetime.now()
-    from_date = now - datetime.timedelta(days=180)
+    from_date = now - datetime.timedelta(days=3)
     to_date = now
     args = sys.argv
     if len(args) > 1:
