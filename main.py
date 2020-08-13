@@ -16,23 +16,8 @@ app = FastAPI(
     description="Import transactions from Investec to Sage One Accounting",
     version="1.0.0",)
 
-@app.get("/api/v1")
-async def status():
-    """Status check"""
-    return PlainTextResponse("OK")
-
-@app.get("/api/v1/import")
-def import_investec_transactions(from_date: datetime.date, to_date: datetime.date) -> int:
-    """
-    Import transaction from Investec to Sage One for a certain date period.
-
-    **from_date** Import from this date (inclusive)
-
-    **to_date** Import to this date (inclusive)
-
-    **returns** The total number of transactions imported into Sage One
-    """
-    # Get the config
+def _get_config():
+    """Helper function to get the config"""
     config = ConfigParser()
     config_file = "config-local.ini"
     if  os.path.exists(config_file):
@@ -45,6 +30,46 @@ def import_investec_transactions(from_date: datetime.date, to_date: datetime.dat
             if k.startswith("%s_" % section.upper()):
                 option = k.split("_", 1)[1].lower()
                 config.set(section, option, v)
+    return config
+
+
+@app.get("/api/v1")
+def status():
+    """Status check"""
+    return PlainTextResponse("OK")
+
+@app.get("/api/v1/sage/companies")
+def get_sage_companies() -> list:
+    """
+    Retrieves the companies in Sage One
+    """
+    config = _get_config() # Get the config
+    sage_client = SageOneAPIClient(config.get("sage", "url"), config.get("sage", "api_key"), config.get("sage", "username"), config.get("sage", "password"))
+    return sage_client.get_companies()
+
+@app.get("/api/v1/sage/bankaccounts")
+def get_sage_bank_accounts(company_id: int) -> list:
+    """
+    Retrieves the bank accounts for a company in Sage One
+
+    **company_id** The Company ID
+    """
+    config = _get_config() # Get the config
+    sage_client = SageOneAPIClient(config.get("sage", "url"), config.get("sage", "api_key"), config.get("sage", "username"), config.get("sage", "password"))
+    return sage_client.get_bank_accounts(company_id)
+
+@app.get("/api/v1/synctransactions")
+def import_investec_transactions(from_date: datetime.date, to_date: datetime.date) -> int:
+    """
+    Import transaction from Investec to Sage One for a certain date period.
+
+    **from_date** Import from this date (inclusive)
+
+    **to_date** Import to this date (inclusive)
+
+    **returns** The total number of transactions imported into Sage One
+    """
+    config = _get_config() # Get the config
     company_id = config.getint("sage", "company_id")
     bank_account_id = config.getint("sage", "bank_account_id")
     # Setup the respective clients
