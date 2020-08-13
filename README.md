@@ -1,7 +1,8 @@
 Overview
 ========
 
-Importing your 
+Importing transactions from your Investec ZA bank account into Sage One Accounting now made easy.
+
 
 Requirements
 ============
@@ -18,7 +19,7 @@ Development
 Create a virtual environment
 
 ```
- python3 -m venv /path/to/env
+python3 -m venv /path/to/env
 ```
 
 Activate the environment and install the requirements in the app folder
