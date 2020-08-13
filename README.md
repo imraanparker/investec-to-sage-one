@@ -1,14 +1,13 @@
 Overview
 ========
 
-A sample API application to show off FastAPI.
+Importing your 
 
 Requirements
 ============
 
-- `Python 3.8`
-- `Docker`
-- `Heroku CLI`
+- `Python 3.6`
+- `Heroku CLI` if you want to deploy to Heroku
 
 Installation
 ============
@@ -31,47 +30,57 @@ Activate the environment and install the requirements in the app folder
 Run the development web server in the app folder
 
 ```
-uvicorn main:app --reload
+uvicorn --port 5000 --host 127.0.0.1 main:app --reload
 ```
 
-Production
-----------
+You can then visit the API interface at http://127.0.0.1:5000/api
 
-A docker container is deployed to Heroku for production use. Run the script to deploy to production.
-The assumption is that you have Docker and the Heroku CLI installed.
-You will need an account on Heroku in order to deploy. You might need to adapt the deploy script with your application name. 
+Deploying to Heroku
+-------------------
 
-```
-./deploy.sh
-```
-
-Accessing the API
-------------------
-
-You can access the api via a browser and use the built-in Swagger interface to interact with the API.
-
-When running in development the URL is
+Create a new application in Heroku and attach the git repository.
 
 ```
-http://localhost:8000/docs
+heroku git:remote -a <name-of-your-app>
 ```
 
-The production URL is
+Once you are ready to deploy the application, run the following to deploy the application on Heroku
 
 ```
-https://fastapi-template.herokuapp.com/docs
+git push heroky master
 ```
 
-Continuous Integration
-=====================
+You will be able to access the application via the Heroku URL and access the API on ```/api```.
 
-All API services are tested. ![Last Build](https://travis-ci.com/imraanparker/fastapi.svg?token=jBQpiw8ckhUhBEp5MQqf&branch=master)
+The API will only work properly if the configuration is setup correctly.
 
-Tests
-======
+Configuration
+-------------
 
-To run the tests locally, simply run
+In order the application to talk to both Investec and Sage One, there are a number of config parameters that need to be set.
 
-```
-pytest
-```
+You can use a config file and/or environment variables to set the parameters.
+
+To use the the config file, copy ```config_example.ini``` as ```config-local.ini``` and set the parameters in the file.
+The application will automatically look for the ```config-local.ini``` and use it if it exists.
+
+The more preferred method is to use environment variables, especially when deploying to Heroku (Config Vars).
+Below is a table of the different config parameters.
+
+**Sage**
+
+Config File Parameter | Environment Variable | Description
+--------------------- | -------------------- | ------------
+username              | SAGE_USERNAME        | Your username for Sage One. Typically an email address
+password              | SAGE_PASSWORD        | Your password for Sage One.
+api_key               | SAGE_API_KEY         | The API Key to authenticate with the Sage One API
+url                   | SAGE_URL             | The Sage One API URL.
+company_id            | SAGE_COMPANY_ID      | The Company ID to use for the syncing 
+bank_account_id       | SAGE_BANK_ACCOUNT_ID | The Bank Account ID under the company to use for the syncing
+
+**Investec**
+
+Config File Parameter | Environment Variable | Description
+--------------------- | -------------------- | ------------
+client_id             | INVESTEC_CLIENT_ID   | Your Investec Client ID
+secret                | INVESTEC_SECRET      | Your Investec Secret
