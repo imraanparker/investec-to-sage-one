@@ -105,8 +105,8 @@ def import_investec_transactions(company_id: int, bank_account_id: int, from_dat
             total_imported += 1
         new_transactions.append(t_data)
         if len(new_transactions) == 100:
-            sage_client.save_bank_account_transactions(new_transactions)
+            sage_client.save_company_bank_account_transactions(company_id, new_transactions)
             new_transactions = list()
     if new_transactions:
-        sage_client.save_bank_account_transactions(new_transactions)
+        sage_client.save_company_bank_account_transactions(company_id, new_transactions)
     return total_imported
