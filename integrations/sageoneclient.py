@@ -23,7 +23,7 @@ class SageOneAPIClient(object):
         self.api = "%s/api/%s" % (api_url, version)
         self.timeout = default_timeout
 
-    def _call(self, service_url: str, method: str, params: dict, body: dict=None) -> dict:
+    def _call(self, service_url: str, method: str, params: dict=None, body: dict=None) -> dict:
         """
         Helper function to call the API
 
