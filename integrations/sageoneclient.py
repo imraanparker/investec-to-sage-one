@@ -33,6 +33,8 @@ class SageOneAPIClient(object):
         :param body: The payload to send
         :returns: The result
         """
+        if not params:
+            params = dict()
         params["apiKey"] = self.api_key
         request = getattr(self.requests_sess, method)
         headers = {"Accept": "application/json"}
