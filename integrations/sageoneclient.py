@@ -141,23 +141,27 @@ class SageOneAPIClient(object):
             params["$skip"] = len(records)
         return records
 
-    def save_bank_account_transaction(self, transaction: dict) -> dict:
+    def save_company_bank_account_transaction(self, company_id: int, transaction: dict) -> dict:
         """
         Saves a bank account transaction
 
+        :param company_id: The company that owns the bank account
         :param transaction: The transaction to save
         :returns: The saved transaction
         """
-        data = self._call("BankTransaction/Save", "post", body=transaction)
+        params = {"CompanyId": company_id}
+        data = self._call("BankTransaction/Save", "post", params=params, body=transaction)
         return data
 
-    def save_bank_account_transactions(self, transactions: list) -> list:
+    def save_company_bank_account_transactions(self, company_id: int, transactions: list) -> list:
         """
         Creates bank transactions (Bulk)
 
+        :param company_id: The company that owns the bank account
         :param transaction: The transactions to save
         :returns: The saved transactions
         """
-        data = self._call("BankTransaction/SaveBatch", "post", body=transactions)
+        params = {"CompanyId": company_id}
+        data = self._call("BankTransaction/SaveBatch", "post", params=params, body=transactions)
         return data
 
