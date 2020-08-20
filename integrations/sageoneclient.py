@@ -57,7 +57,7 @@ class SageOneAPIClient(object):
         data = self._call("Company/Get", "get", params={"$filter": "Active eq true", "$select": "ID,Name", "$orderby": "Name"})
         return data["Results"]
 
-    def get_unallocated_accounts(self, company_id: int) -> dict:
+    def get_company_unallocated_accounts(self, company_id: int) -> dict:
         """
         Get the unallocated accounts for use in creation of bank transactions
 
@@ -78,9 +78,9 @@ class SageOneAPIClient(object):
                 results["Income"] = {"ID": d["ID"], "Name": d["Name"]}
         return results
 
-    def get_tax_types(self, company_id: int) -> list:
+    def get_company_tax_types(self, company_id: int) -> list:
         """
-        Get a list of tax types
+        Get a list of tax types for a company
 
         :param company_id: The company
         :returns: The tax types for the company
@@ -94,7 +94,7 @@ class SageOneAPIClient(object):
         data = self._call("TaxType/Get", "get", params=params)
         return data["Results"]
 
-    def get_bank_accounts(self, company_id: int) -> list:
+    def get_company_bank_accounts(self, company_id: int) -> list:
         """
         Get a list of active bank accounts
 
@@ -110,20 +110,18 @@ class SageOneAPIClient(object):
         data = self._call("BankAccount/Get", "get", params=params)
         return data["Results"]
 
-    def get_bank_account_transactions(self, company_id: int, bank_account_id: int=None, from_date: datetime=None, to_date: datetime=None) -> list:
+    def get_company_bank_account_transactions(self, company_id: int, bank_account_id: int, from_date: datetime=None, to_date: datetime=None) -> list:
         """
-        Get a list of bank account transactions
+        Get a list of transactions for a bank account
 
-        :param company_id: The company
-        :param bank_account_id: The bank account to filter on
+        :param company_id: The company that owns the bank account
+        :param bank_account_id: The bank account
         :param from_date: Only get transactions from this date (inclusive)
         :param to_date: Only get transactions to this date (inclusive)
         :returns: The bank account transactions
         """
-        params = {"CompanyID": company_id, "$orderby": "Date"}
-        filters = list()
-        if bank_account_id: 
-            filters.append("BankAccountId eq %s" % bank_account_id)
+        params = {"CompanyId": company_id, "$orderby": "Date"}
+        filters = ["BankAccountId eq %s" % bank_account_id]
         if from_date:
             from_date = from_date - datetime.timedelta(days=1)
             filters.append("Date gt DateTime'%s'" % from_date.strftime("%Y-%m-%d"))
@@ -141,27 +139,23 @@ class SageOneAPIClient(object):
             params["$skip"] = len(records)
         return records
 
-    def save_bank_account_transaction(self, company_id: int, transaction: dict) -> dict:
+    def save_bank_account_transaction(self, transaction: dict) -> dict:
         """
         Saves a bank account transaction
 
-        :param company_id: The company
         :param transaction: The transaction to save
         :returns: The saved transaction
         """
-        params = {"CompanyID": company_id}
-        data = self._call("BankTransaction/Save", "post", params=params, body=transaction)
+        data = self._call("BankTransaction/Save", "post", body=transaction)
         return data
 
-    def save_bank_account_transactions(self, company_id: int, transactions: list) -> list:
+    def save_bank_account_transactions(self, transactions: list) -> list:
         """
         Creates bank transactions (Bulk)
 
-        :param company_id: The company
         :param transaction: The transactions to save
         :returns: The saved transactions
         """
-        params = {"CompanyID": company_id}
-        data = self._call("BankTransaction/SaveBatch", "post", params=params, body=transactions)
+        data = self._call("BankTransaction/SaveBatch", "post", body=transactions)
         return data
 
