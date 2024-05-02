@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-from fastapi import APIRouter
 from fastapi import APIRouter
 from integrations.sageoneclient import SageOneAPIClient
-from investec.client import OpenAPIClient
+from integrations.investec import InvestecAPIClient
 from utils import get_config
 import dateutil.parser
 import datetime
@@ -29,14 +29,56 @@ def get_sage_bank_accounts(company_id: int) -> list:
     sage_client = SageOneAPIClient(config.get("sageone", "url"), config.get("sageone", "api_key"), config.get("sageone", "username"), config.get("sageone", "password"))
     return sage_client.get_company_bank_accounts(company_id)
 
+@router.post("/syncallbankaccounts")
+def import_investec_transactions(from_date: datetime.date, to_date: datetime.date) -> dict:
+    config = get_config() # Get the config
+    sage_client = SageOneAPIClient(config.get("sageone", "url"), config.get("sageone", "api_key"), config.get("sageone", "username"), config.get("sageone", "password"))
+    investec_client = InvestecAPIClient(config.get("investec", "client_id"), config.get("investec", "secret"), config.get("investec", "api_key"))
+
+    # Get all the investec bank accounts
+    investec_bank_accounts = dict()
+    investec_resp = investec_client.get_accounts()
+    for rr in investec_resp:
+        investec_bank_accounts[rr["accountNumber"]] = rr
+
+    bank_accounts_found = list()
+    bank_accounts_notfound = list()
+
+    # Get all the companies in Sage
+    companies = sage_client.get_companies()
+    for c in companies:
+        company_id = c["ID"]
+        company_name = c["Name"]
+
+        # Get the bank accounts
+        sage_bank_accounts = sage_client.get_company_bank_accounts(company_id)
+        for b in sage_bank_accounts:
+            bank_account_id = b["ID"]
+            bank_account_number = b["AccountNumber"]
+            bank_account_name = b["Name"]
+            bank_name = b["BankName"]
+
+            report_data = dict(sage=b, investec=dict())
+            if bank_account_number in investec_bank_accounts:
+                investec_bank_details = investec_bank_accounts[bank_account_number]
+                report_data["investec"] = investec_bank_details
+                bank_accounts_found.append(report_data)
+                # merge the transactions
+                import_investec_transactions(company_id, bank_account_id, investec_bank_details["accountId"], from_date, to_date)
+            else:
+                bank_accounts_notfound.append(report_data)
+    return dict(matched=bank_accounts_found, not_matched=bank_accounts_notfound)
+
 @router.post("/synctransactions")
-def import_investec_transactions(company_id: int, bank_account_id: int, from_date: datetime.date, to_date: datetime.date) -> int:
+def import_investec_transactions(sage_company_id: int, sage_bank_account_id: int, investec_bank_account_id: int, from_date: datetime.date, to_date: datetime.date) -> int:
     """
     Import transaction from Investec to Sage One for a certain date period.
 
-    **company_id** The company ID
+    **sage_company_id** The company ID
 
-    **bank_account_id** The bank account ID to import the transactions into
+    **sage_bank_account_id** The Sage bank account ID to import the transactions into
+
+    **investec_bank_account_id** The Investec bank account ID to export the transactions from
 
     **from_date** Import from this date (inclusive)
 
@@ -46,15 +88,17 @@ def import_investec_transactions(company_id: int, bank_account_id: int, from_dat
     """
     config = get_config() # Get the config
     sage_client = SageOneAPIClient(config.get("sageone", "url"), config.get("sageone", "api_key"), config.get("sageone", "username"), config.get("sageone", "password"))
-    investec_client = OpenAPIClient(config.get("investec", "client_id"), config.get("investec", "secret"))
+    investec_client = InvestecAPIClient(config.get("investec", "client_id"), config.get("investec", "secret"), config.get("investec", "api_key"))
     # Get the default account types to assign to income and expenses
-    accounts = sage_client.get_company_unallocated_accounts(company_id)
+    accounts = sage_client.get_company_unallocated_accounts(sage_company_id)
     unallocated_income_id =  accounts["Income"]["ID"]
     unallocated_expense_id =  accounts["Expenses"]["ID"]
+    # Get the txt types
+    tax_types = sage_client.get_company_tax_types(sage_company_id)
     # Get a list of the transactions already in Sage
     imported_transactions = list()
     manual_transactions = list()
-    sage_transactions = sage_client.get_company_bank_account_transactions(company_id, bank_account_id, from_date, to_date)
+    sage_transactions = sage_client.get_company_bank_account_transactions(sage_company_id, sage_bank_account_id, from_date, to_date)
     valid_sha256 = re.compile(r"^[a-f0-9]{64}(:.+)?$", re.IGNORECASE)
     for st in sage_transactions:
         bank_identifier = st.get("BankUniqueIdentifier")
@@ -62,8 +106,7 @@ def import_investec_transactions(company_id: int, bank_account_id: int, from_dat
             imported_transactions.append(st["BankUniqueIdentifier"])
         else:
             manual_transactions.append(st)
-    accounts = investec_client.get_accounts()
-    transactions = investec_client.get_account_transactions(accounts[0]["accountId"], from_date, to_date)
+    transactions = investec_client.get_account_transactions(investec_bank_account_id, from_date, to_date)
     new_transactions = list()
     total_imported = 0
     for trx in transactions:
@@ -82,7 +125,7 @@ def import_investec_transactions(company_id: int, bank_account_id: int, from_dat
         t_data = {
             "ID": 0,
             "Date": transaction_date,
-            "BankAccountId": bank_account_id,
+            "BankAccountId": sage_bank_account_id,
             "Type": 1, # Account
             "SelectionId": unallocated_expense_id if trx_type == "DEBIT" else unallocated_income_id,
             "Description": trx_description,
@@ -105,8 +148,8 @@ def import_investec_transactions(company_id: int, bank_account_id: int, from_dat
             total_imported += 1
         new_transactions.append(t_data)
         if len(new_transactions) == 100:
-            sage_client.save_company_bank_account_transactions(company_id, new_transactions)
+            sage_client.save_company_bank_account_transactions(sage_company_id, new_transactions)
             new_transactions = list()
     if new_transactions:
-        sage_client.save_company_bank_account_transactions(company_id, new_transactions)
+        sage_client.save_company_bank_account_transactions(sage_company_id, new_transactions)
     return total_imported

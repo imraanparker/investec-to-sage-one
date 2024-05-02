@@ -74,6 +74,7 @@ Config File Parameter | Environment Variable | Description
 --------------------- | -------------------- | ------------
 client_id             | INVESTEC_CLIENT_ID   | Your Investec Client ID
 secret                | INVESTEC_SECRET      | Your Investec Secret
+api_key               | INVESTEC_API_KEY     | Your Investec API Key
 
 **Sage One**
 
@@ -84,11 +85,4 @@ password              | SAGEONE_PASSWORD         | Your password for Sage One.
 api_key               | SAGEONE_API_KEY          | The API Key to authenticate with the Sage One API
 url                   | SAGEONE_URL              | The Sage One API URL.
 
-**Scheduled Sage One Import**
-To use the script to periodically sync transactions between Sage One and Investec, you need to declare the following config parameters
-
-Config File Parameter | Environment Variable     | Description
---------------------- | ------------------------ | ------------
-company_id            | SAGEONE_COMPANY_ID       | The Company ID to use for the sync
-bank_account_id       | SAGEONE_BANK_ACCOUNT_ID  | The Bank Account ID under the company to use for  sync
 

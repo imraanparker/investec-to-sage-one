@@ -7,4 +7,3 @@ python-dateutil
 pytest
 pytest-cov
 coveralls
-git+https://gitlab.com/vchegwidden/investec-openbanking-python

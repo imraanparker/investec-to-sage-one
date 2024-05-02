@@ -41,14 +41,13 @@ class SageOneAPIClient(object):
         if method == "post":
             headers["Content-Type"] = "application/json; charset=utf-8"
         response = request("%s/%s" % (self.api, service_url), params=params, json=body, headers=headers, timeout=self.timeout)
-        try:
-            response.raise_for_status()
-            content = response.json()
-            if "data" in content:
-                return content["data"]
-            return content
-        except:
-            raise requests.exceptions.HTTPError(response.status_code, response.content)
+        if not response.ok:
+            requests.exceptions.HTTPError(response.status_code, response.content)
+        response.raise_for_status()
+        content = response.json()
+        if "data" in content:
+            return content["data"]
+        return content
 
     def get_companies(self) -> list:
         """
